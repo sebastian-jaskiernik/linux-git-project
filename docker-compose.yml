@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - logger
+    networks:
+      - mynetwork
+
+  logger:
+    build:
+      context: .
+      dockerfile: Dockerfile.logger
+    networks:
+      - mynetwork
+
+networks:
+  mynetwork:
+    driver: bridge
