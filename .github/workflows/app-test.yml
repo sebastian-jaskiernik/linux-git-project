@@ -1,0 +1,42 @@
+name: App Test CI
+
+on:
+  push:
+    branches: [ main, feature-docker-compose ]
+  pull_request:
+    branches: [ main, feature-docker-compose ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Build Docker images
+        run: |
+          docker build -f Dockerfile.app -t test-app-image .
+          docker build -f Dockerfile.logger -t test-logger-image .
+
+      - name: Run logger container
+        run: docker run -d --name logger-test test-logger-image
+
+      - name: Run app container
+        run: docker run -d --name app-test --link logger-test -p 8080:8080 test-app-image
+
+      - name: Wait for app to start
+        run: sleep 5
+
+      - name: Test HTTP response
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080)
+          if [ "$RESPONSE" -ne 200 ]; then
+            echo "App did not respond with 200 OK"
+            exit 1
+          fi
+
+      - name: Cleanup containers
+        run: |
+          docker stop app-test logger-test
+          docker rm app-test logger-test
